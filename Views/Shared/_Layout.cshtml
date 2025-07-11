@@ -58,11 +58,7 @@
               Reporting
             </a>
           </li> 
-             <li class="govuk-service-navigation__item">
-            <a class="govuk-service-navigation__link" href="/settings">
-              Settings
-            </a>
-          </li>
+             @await Component.InvokeAsync("AdminNavigation")
         </ul>
       </nav>
     </div>

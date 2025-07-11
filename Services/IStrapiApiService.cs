@@ -53,5 +53,6 @@ namespace S186Statements.Web.Services
         Task<User> CreateUserAsync(User user);
         Task<User> UpdateUserAsync(int id, User user);
         Task DeleteUserAsync(int id);
+        Task<List<User>> GetAllUsersAsync();
     }
 }

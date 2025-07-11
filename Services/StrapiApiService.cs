@@ -428,6 +428,7 @@ namespace S186Statements.Web.Services
         {
             try
             {
+                // First try exact match
                 var url = $"/api/users?filters[email][$eq]={Uri.EscapeDataString(email)}&populate=*";
                 Console.WriteLine($"Calling Strapi API: {url}");
 
@@ -457,10 +458,33 @@ namespace S186Statements.Web.Services
                         return (userData?.Attributes, userData?.Id);
                     }
                 }
-                else
+
+                // If exact match fails, try case-insensitive search by getting all users
+                Console.WriteLine("Exact email match failed, trying case-insensitive search...");
+                var allUsersUrl = "/api/users?populate=*";
+                var allUsersResponse = await _httpClient.GetAsync(allUsersUrl);
+
+                if (allUsersResponse.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Strapi API error response: {errorContent}");
+                    var allUsersContent = await allUsersResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"All users response: {allUsersContent}");
+
+                    try
+                    {
+                        var allUsers = JsonSerializer.Deserialize<List<User>>(allUsersContent, _jsonOptions);
+                        var matchingUser = allUsers?.FirstOrDefault(u =>
+                            string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
+
+                        if (matchingUser != null)
+                        {
+                            Console.WriteLine($"Found user with case-insensitive match: {matchingUser.Email}");
+                            return (matchingUser, matchingUser.Id);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing all users response: {ex.Message}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -477,22 +501,26 @@ namespace S186Statements.Web.Services
                 // Generate a random password for the user (required by users-permissions plugin)
                 var randomPassword = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
 
-                // Create user data using the same format as the working app
+                // Create user data using camelCase field names that Strapi expects
                 var createData = new
                 {
                     username = user.Username,
                     email = user.Email,
                     password = randomPassword,
-                    first_name = user.FirstName,
-                    last_name = user.LastName,
-                    entra_id = user.EntraId,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    entraId = user.EntraId,
                     provider = "local",
                     confirmed = true,
                     blocked = false,
                     role = 1 // Role ID 1 is typically "Authenticated" in Strapi
                 };
 
-                var json = JsonSerializer.Serialize(createData, _jsonOptions);
+                var json = JsonSerializer.Serialize(createData, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null, // Use field names as-is since they're already camelCase
+                    PropertyNameCaseInsensitive = true
+                });
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 Console.WriteLine($"Creating user with JSON: {json}");
@@ -559,16 +587,20 @@ namespace S186Statements.Web.Services
         {
             try
             {
-                // Create update data using the same format as the working app
+                // Create update data using camelCase field names that Strapi expects
                 var updateData = new
                 {
-                    first_name = user.FirstName,
-                    last_name = user.LastName,
-                    entra_id = user.EntraId,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    entraId = user.EntraId,
                     email = user.Email
                 };
 
-                var json = JsonSerializer.Serialize(updateData, _jsonOptions);
+                var json = JsonSerializer.Serialize(updateData, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null, // Use field names as-is since they're already camelCase
+                    PropertyNameCaseInsensitive = true
+                });
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 Console.WriteLine($"Updating user {id} with JSON: {json}");
@@ -635,6 +667,46 @@ namespace S186Statements.Web.Services
         {
             var response = await _httpClient.DeleteAsync($"/api/users/{id}");
             response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            try
+            {
+                var url = "/api/users?populate=*";
+                Console.WriteLine($"Calling Strapi API: {url}");
+
+                var response = await _httpClient.GetAsync(url);
+                Console.WriteLine($"GetAllUsersAsync response status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"GetAllUsersAsync response content: {content}");
+
+                    try
+                    {
+                        var users = JsonSerializer.Deserialize<List<User>>(content, _jsonOptions);
+                        return users ?? new List<User>();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing GetAllUsersAsync response: {ex.Message}");
+                        return new List<User>();
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"GetAllUsersAsync error response: {errorContent}");
+                    return new List<User>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] GetAllUsersAsync exception: {ex.Message}");
+                return new List<User>();
+            }
         }
         #endregion
 

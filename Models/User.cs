@@ -80,6 +80,9 @@ namespace S186Statements.Web.Models
         [JsonPropertyName("role")]
         public object? Role { get; set; }
 
+        [JsonPropertyName("isAdministrator")]
+        public bool? IsAdministrator { get; set; }
+
         [JsonPropertyName("createdAt")]
         public DateTime CreatedAt { get; set; }
 

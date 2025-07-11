@@ -25,6 +25,21 @@ namespace S186Statements.Web.Services
                 var (existingUser, userId) = await _strapiApiService.GetUserByEmailAsync(email);
                 _logger.LogInformation($"GetUserByEmailAsync result - User: {(existingUser != null ? "Found" : "Not found")}, ID: {userId}");
 
+                // If GetUserByEmailAsync fails, try getting all users and filtering (like the working app)
+                if (existingUser == null)
+                {
+                    _logger.LogInformation("GetUserByEmailAsync failed, trying GetAllUsersAsync as fallback...");
+                    var allUsers = await _strapiApiService.GetAllUsersAsync();
+                    existingUser = allUsers.FirstOrDefault(u =>
+                        string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
+
+                    if (existingUser != null)
+                    {
+                        userId = existingUser.Id;
+                        _logger.LogInformation($"Found user with case-insensitive match: {existingUser.Email}, ID: {userId}");
+                    }
+                }
+
                 if (existingUser != null && userId.HasValue)
                 {
                     // User exists, check if we need to update their profile
@@ -104,6 +119,42 @@ namespace S186Statements.Web.Services
             {
                 _logger.LogError(ex, $"Error ensuring user exists for email {email}");
                 throw;
+            }
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            try
+            {
+                _logger.LogInformation($"Getting user by email: {email}");
+
+                // Try to get user by email
+                var (existingUser, userId) = await _strapiApiService.GetUserByEmailAsync(email);
+
+                if (existingUser != null)
+                {
+                    return existingUser;
+                }
+
+                // If GetUserByEmailAsync fails, try getting all users and filtering
+                _logger.LogInformation("GetUserByEmailAsync failed, trying GetAllUsersAsync as fallback...");
+                var allUsers = await _strapiApiService.GetAllUsersAsync();
+                var user = allUsers.FirstOrDefault(u =>
+                    string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
+
+                if (user != null)
+                {
+                    _logger.LogInformation($"Found user with case-insensitive match: {user.Email}");
+                    return user;
+                }
+
+                _logger.LogInformation($"User not found: {email}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting user by email {email}");
+                return null;
             }
         }
     }

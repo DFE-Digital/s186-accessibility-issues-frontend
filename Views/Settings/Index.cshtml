@@ -1,0 +1,40 @@
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-xl">Settings</h1>
+                
+                <p class="govuk-body">
+                    Welcome to the administrator settings page. Here you can manage system configuration and user permissions.
+                </p>
+
+                <div class="govuk-inset-text">
+                    <p class="govuk-body">
+                        <strong>Administrator Access:</strong> You are viewing this page because you have administrator privileges.
+                    </p>
+                </div>
+
+                <h2 class="govuk-heading-l">System Information</h2>
+                <dl class="govuk-summary-list">
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Current User</dt>
+                        <dd class="govuk-summary-list__value">@User.Identity?.Name</dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Access Time</dt>
+                        <dd class="govuk-summary-list__value">@DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")</dd>
+                    </div>
+                </dl>
+
+                <h2 class="govuk-heading-l">Administrative Functions</h2>
+                <p class="govuk-body">
+                    Additional administrative functions will be available here in future updates.
+                </p>
+            </div>
+        </div>
+    </main>
+</div> 
