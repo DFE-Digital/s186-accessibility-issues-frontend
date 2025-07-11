@@ -20,13 +20,13 @@
 name: Build and deploy ASP.Net Core app to an Azure Web App
 
 env:
-  AZURE_WEBAPP_NAME: statement-issues-service    # set this to the name of your Azure Web App
-  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
-  DOTNET_VERSION: '5'                 # set this to the .NET Core version to use
+  AZURE_WEBAPP_NAME: statement-issues-service # set this to the name of your Azure Web App
+  AZURE_WEBAPP_PACKAGE_PATH: "." # set this to the path to your web app project, defaults to the repository root
+  DOTNET_VERSION: "8.0.x" # set this to the .NET Core version to use
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -52,8 +52,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Restore dependencies
+        run: dotnet restore
+
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release --no-restore
 
       - name: dotnet publish
         run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
@@ -67,10 +70,10 @@ jobs:
   deploy:
     permissions:
       contents: none
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build
     environment:
-      name: 'Development'
+      name: "Development"
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
