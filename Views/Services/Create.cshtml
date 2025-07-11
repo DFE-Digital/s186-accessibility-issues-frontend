@@ -1,0 +1,50 @@
+@model S186Statements.Web.Models.Service
+
+@{
+    ViewData["Title"] = "Create Service";
+}
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create New Service</h2>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="ServiceId" class="form-label">Service ID</label>
+                        <input asp-for="ServiceId" class="form-control" />
+                        <span asp-validation-for="ServiceId" class="text-danger"></span>
+                        <div class="form-text">A unique identifier for this service.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label">Service Name</label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                        <div class="form-text">The display name for this service.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="FipsId" class="form-label">FIPS ID</label>
+                        <input asp-for="FipsId" class="form-control" />
+                        <span asp-validation-for="FipsId" class="text-danger"></span>
+                        <div class="form-text">Federal Information Processing Standards identifier (optional).</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                        <button type="submit" class="btn btn-primary">Create Service</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+} 

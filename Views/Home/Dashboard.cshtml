@@ -1,0 +1,130 @@
+@model S186Statements.Web.Controllers.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="text-center">
+    <h1 class="display-4">S186 Statements Dashboard</h1>
+    <p class="lead">Welcome to the S186 Statements management system.</p>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Services</h5>
+                <p class="card-text display-6">@Model.TotalServices</p>
+                <a asp-controller="Services" asp-action="Index" class="btn btn-light">View Services</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Issues</h5>
+                <p class="card-text display-6">@Model.TotalIssues</p>
+                <a asp-controller="Issues" asp-action="Index" class="btn btn-light">View Issues</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Open Issues</h5>
+                <p class="card-text display-6">@Model.OpenIssues</p>
+                <a asp-controller="Issues" asp-action="Index" class="btn btn-light">View Open Issues</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Closed Issues</h5>
+                <p class="card-text display-6">@Model.ClosedIssues</p>
+                <a asp-controller="Issues" asp-action="Index" class="btn btn-light">View Closed Issues</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Services</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentServices.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var service in Model.RecentServices)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@service.Name</h6>
+                                    <small>ID: @service.ServiceId</small>
+                                </div>
+                                @if (!string.IsNullOrEmpty(service.FipsId))
+                                {
+                                    <small class="text-muted">FIPS ID: @service.FipsId</small>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No services found.</p>
+                }
+                <div class="mt-3">
+                    <a asp-controller="Services" asp-action="Index" class="btn btn-primary">View All Services</a>
+                    <a asp-controller="Services" asp-action="Create" class="btn btn-outline-primary">Add New Service</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Issues</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentIssues.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var issue in Model.RecentIssues)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@issue.Title</h6>
+                                    <span class="badge @(issue.State == S186Statements.Web.Models.IssueState.Open ? "bg-danger" : "bg-success")">
+                                        @issue.State
+                                    </span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(issue.Description))
+                                {
+                                    <p class="mb-1">@(issue.Description.Length > 100 ? issue.Description.Substring(0, 100) + "..." : issue.Description)</p>
+                                }
+                                <small class="text-muted">
+                                    @if (issue.DateIdentified.HasValue)
+                                    {
+                                        <span>Identified: @issue.DateIdentified.Value.ToShortDateString()</span>
+                                    }
+                                </small>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No issues found.</p>
+                }
+                <div class="mt-3">
+                    <a asp-controller="Issues" asp-action="Index" class="btn btn-primary">View All Issues</a>
+                    <a asp-controller="Issues" asp-action="Create" class="btn btn-outline-primary">Add New Issue</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
