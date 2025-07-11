@@ -13,15 +13,13 @@ builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
 
 // Configure authorization
-builder.Services.AddAuthorization(options =>
-{
-    // Add any custom authorization policies here
-    options.AddPolicy("RequireAuthenticatedUser", policy =>
-        policy.RequireAuthenticatedUser());
-});
+builder.Services.AddAuthorization();
 
 // Register Strapi API service
 builder.Services.AddHttpClient<IStrapiApiService, StrapiApiService>();
+
+// Register User service
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Add Microsoft Identity Web UI
 builder.Services.AddRazorPages()

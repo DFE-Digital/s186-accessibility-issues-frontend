@@ -399,6 +399,246 @@ namespace S186Statements.Web.Services
             response.EnsureSuccessStatusCode();
         }
         #endregion
+
+        #region User Methods
+        public async Task<IEnumerable<User>> GetUsersAsync()
+        {
+            var response = await _httpClient.GetAsync("/api/users?populate=*");
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<StrapiResponse<User>>(content, _jsonOptions);
+
+            return result?.Data?.Select(d => d.Attributes) ?? Enumerable.Empty<User>();
+        }
+
+        public async Task<User?> GetUserAsync(int id)
+        {
+            var response = await _httpClient.GetAsync($"/api/users/{id}?populate=*");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<StrapiSingleResponse<User>>(content, _jsonOptions);
+                return result?.Data?.Attributes;
+            }
+            return null;
+        }
+
+        public async Task<(User? User, int? Id)> GetUserByEmailAsync(string email)
+        {
+            try
+            {
+                var url = $"/api/users?filters[email][$eq]={Uri.EscapeDataString(email)}&populate=*";
+                Console.WriteLine($"Calling Strapi API: {url}");
+
+                var response = await _httpClient.GetAsync(url);
+                Console.WriteLine($"Strapi API response status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Strapi API response content: {content}");
+
+                    // Try to parse as users-permissions format first (direct array)
+                    try
+                    {
+                        var users = JsonSerializer.Deserialize<List<User>>(content, _jsonOptions);
+                        var user = users?.FirstOrDefault();
+                        if (user != null)
+                        {
+                            return (user, user.Id);
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback to StrapiResponse format
+                        var result = JsonSerializer.Deserialize<StrapiResponse<User>>(content, _jsonOptions);
+                        var userData = result?.Data?.FirstOrDefault();
+                        return (userData?.Attributes, userData?.Id);
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Strapi API error response: {errorContent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] GetUserByEmailAsync exception: {ex.Message}");
+            }
+            return (null, null);
+        }
+
+        public async Task<User> CreateUserAsync(User user)
+        {
+            try
+            {
+                // Generate a random password for the user (required by users-permissions plugin)
+                var randomPassword = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
+
+                // Create user data using the same format as the working app
+                var createData = new
+                {
+                    username = user.Username,
+                    email = user.Email,
+                    password = randomPassword,
+                    first_name = user.FirstName,
+                    last_name = user.LastName,
+                    entra_id = user.EntraId,
+                    provider = "local",
+                    confirmed = true,
+                    blocked = false,
+                    role = 1 // Role ID 1 is typically "Authenticated" in Strapi
+                };
+
+                var json = JsonSerializer.Serialize(createData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                Console.WriteLine($"Creating user with JSON: {json}");
+
+                var response = await _httpClient.PostAsync("/api/users", content);
+                Console.WriteLine($"Create user response status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Create user response content: {responseContent}");
+
+                    try
+                    {
+                        // Try to handle the double data wrapper like in the working app
+                        var jsonDoc = JsonDocument.Parse(responseContent);
+                        var root = jsonDoc.RootElement;
+
+                        // Check if there's a double data wrapper
+                        if (root.TryGetProperty("data", out var dataElement) &&
+                            dataElement.TryGetProperty("data", out var innerDataElement))
+                        {
+                            // Double data wrapper: {"data": {"data": {...}}}
+                            var result = JsonSerializer.Deserialize<User>(innerDataElement.GetRawText(), _jsonOptions);
+                            if (result != null) return result;
+                        }
+                        else if (root.TryGetProperty("data", out var singleDataElement))
+                        {
+                            // Single data wrapper: {"data": {...}}
+                            var result = JsonSerializer.Deserialize<User>(singleDataElement.GetRawText(), _jsonOptions);
+                            if (result != null) return result;
+                        }
+                        else
+                        {
+                            // Direct response: {...}
+                            var result = JsonSerializer.Deserialize<User>(responseContent, _jsonOptions);
+                            if (result != null) return result;
+                        }
+
+                        return user;
+                    }
+                    catch (JsonException ex)
+                    {
+                        Console.WriteLine($"[DEBUG] Failed to deserialize create user response. Content: {responseContent}");
+                        return user;
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Create user error response: {errorContent}");
+                    response.EnsureSuccessStatusCode(); // This will throw an exception
+                    return user; // This line won't be reached
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] CreateUserAsync exception: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<User> UpdateUserAsync(int id, User user)
+        {
+            try
+            {
+                // Create update data using the same format as the working app
+                var updateData = new
+                {
+                    first_name = user.FirstName,
+                    last_name = user.LastName,
+                    entra_id = user.EntraId,
+                    email = user.Email
+                };
+
+                var json = JsonSerializer.Serialize(updateData, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                Console.WriteLine($"Updating user {id} with JSON: {json}");
+
+                var response = await _httpClient.PutAsync($"/api/users/{id}", content);
+                Console.WriteLine($"Update user response status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Update user response content: {responseContent}");
+
+                    try
+                    {
+                        // Try to handle the double data wrapper like in the working app
+                        var jsonDoc = JsonDocument.Parse(responseContent);
+                        var root = jsonDoc.RootElement;
+
+                        // Check if there's a double data wrapper
+                        if (root.TryGetProperty("data", out var dataElement) &&
+                            dataElement.TryGetProperty("data", out var innerDataElement))
+                        {
+                            // Double data wrapper: {"data": {"data": {...}}}
+                            var result = JsonSerializer.Deserialize<User>(innerDataElement.GetRawText(), _jsonOptions);
+                            if (result != null) return result;
+                        }
+                        else if (root.TryGetProperty("data", out var singleDataElement))
+                        {
+                            // Single data wrapper: {"data": {...}}
+                            var result = JsonSerializer.Deserialize<User>(singleDataElement.GetRawText(), _jsonOptions);
+                            if (result != null) return result;
+                        }
+                        else
+                        {
+                            // Direct response: {...}
+                            var result = JsonSerializer.Deserialize<User>(responseContent, _jsonOptions);
+                            if (result != null) return result;
+                        }
+
+                        return user;
+                    }
+                    catch (JsonException ex)
+                    {
+                        Console.WriteLine($"[DEBUG] Failed to deserialize update user response. Content: {responseContent}");
+                        return user;
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Update user error response: {errorContent}");
+                    response.EnsureSuccessStatusCode(); // This will throw an exception
+                    return user; // This line won't be reached
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] UpdateUserAsync exception: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task DeleteUserAsync(int id)
+        {
+            var response = await _httpClient.DeleteAsync($"/api/users/{id}");
+            response.EnsureSuccessStatusCode();
+        }
+        #endregion
+
+
     }
 
     // Helper classes for Strapi API responses

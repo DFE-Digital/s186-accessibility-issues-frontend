@@ -45,5 +45,13 @@ namespace S186Statements.Web.Services
         Task<IssueComment> CreateIssueCommentAsync(IssueComment comment);
         Task<IssueComment> UpdateIssueCommentAsync(int id, IssueComment comment);
         Task DeleteIssueCommentAsync(int id);
+
+        // User endpoints
+        Task<IEnumerable<User>> GetUsersAsync();
+        Task<User?> GetUserAsync(int id);
+        Task<(User? User, int? Id)> GetUserByEmailAsync(string email);
+        Task<User> CreateUserAsync(User user);
+        Task<User> UpdateUserAsync(int id, User user);
+        Task DeleteUserAsync(int id);
     }
 }
